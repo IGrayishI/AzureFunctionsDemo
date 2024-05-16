@@ -3,13 +3,18 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MongoDB.Bson;
 using MongoDB.Driver;
+using System.Security.Authentication;
 
-const string connectionUri = "Connectionstring";
-var settings = MongoClientSettings.FromConnectionString(connectionUri);
-// Set the ServerApi field of the settings object to set the version of the Stable API on the client
-settings.ServerApi = new ServerApi(ServerApiVersion.V1);
-// Create a new client and connect to the server
-var client = new MongoClient(settings);
+
+string connectionString =
+  Environment.GetEnvironmentVariable(@"ConnectionString");
+MongoClientSettings settings = MongoClientSettings.FromUrl(
+  new MongoUrl(connectionString)
+);
+settings.SslSettings =
+  new SslSettings() { EnabledSslProtocols = SslProtocols.Tls12 };
+var mongoClient = new MongoClient(settings);
+
 
 var host = new HostBuilder()
     .ConfigureFunctionsWorkerDefaults()
@@ -17,7 +22,7 @@ var host = new HostBuilder()
     {
         services.AddApplicationInsightsTelemetryWorkerService();
         services.ConfigureFunctionsApplicationInsights();
-        services.AddSingleton<IMongoClient>(client);
+        services.AddSingleton<IMongoClient>(mongoClient);
     })
     .Build();
 
